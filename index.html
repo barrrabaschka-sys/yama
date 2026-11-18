@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Квантовый квест — Потенциальная яма</title>
+  <script>
+    window.MathJax = {
+      tex: {inlineMath: [['\\(', '\\)']], displayMath: [['\\[', '\\]']]},
+      options: {skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']}
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    :root {
+      --bg-0: #070b1f;
+      --bg-1: #0b1330;
+      --bg-2: #111a44;
+      --surface: rgba(17, 26, 68, .55);
+      --surface-2: rgba(255,255,255,.04);
+      --line: rgba(140, 170, 255, .14);
+      --ink: #eaf0ff;
+      --ink-soft: #b9c6ea;
+      --muted: #7f8fb8;
+      --indigo: #6366f1;
+      --indigo-2: #8b5cf6;
+      --cyan: #22d3ee;
+      --cyan-2: #67e8f9;
+      --lav: #c4b5fd;
+      --pink: #f472b6;
+      --amber: #fbbf24;
+      --green: #34d399;
+      --red: #fb7185;
+      --grad-main: linear-gradient(135deg, #6366f1, #22d3ee);
+      --grad-text: linear-gradient(90deg, #c7d2fe, #67e8f9 55%, #e9d5ff);
+      --shadow-lg: 0 24px 60px rgba(3, 8, 30, .55);
+      --glow-cyan: 0 0 0 1px rgba(34,211,238,.25), 0 10px 30px rgba(34,211,238,.18);
+      --glow-indigo: 0 0 0 1px rgba(99,102,241,.3), 0 12px 32px rgba(99,102,241,.28);
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 8% -10%, rgba(99,102,241,.35), transparent 60%),
+        radial-gradient(1000px 520px at 95% 0%, rgba(34,211,238,.22), transparent 55%),
+        radial-gradient(900px 600px at 50% 115%, rgba(244,114,182,.18), transparent 60%),
+        linear-gradient(165deg, var(--bg-0), var(--bg-1) 45%, var(--bg-2));
+      background-attachment: fixed;
+      line-height: 1.65;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 44px 44px;
+      mask-image: radial-gradient(circle at 50% 0%, #000 0%, transparent 75%);
+      opacity: .7;
+    }
+
+    /* ===== Двухколоночный каркас ===== */
+    .shell {
+      position: relative; z-index: 1;
+      width: min(1240px, 96%);
+      margin: 0 auto;
+      padding: 22px 0 60px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* ===== Левая колонка ===== */
+    .sidebar {
+      position: sticky; top: 18px;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .brand {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border: 1px solid var(--line); border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+    }
+    .brand-logo {
+      width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+      background: var(--grad-main); font-size: 20px; color: #06122e; font-weight: 900;
+      box-shadow: var(--glow-indigo); flex-shrink: 0;
+    }
+    .brand-title { font-weight: 900; font-size: 15px; letter-spacing: .06em; color: #fff; }
+    .brand-sub { font-size: 11.5px; color: var(--muted); letter-spacing: .14em; text-transform: uppercase; }
+
+    .stats-card {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+      padding: 14px; border-radius: var(--radius-md);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border: 1px solid var(--line); box-shadow: var(--shadow-lg);
+    }
+    .stat-cell { text-align: center; }
+    .stat-cell .k { font-size: 10.5px; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; font-weight: 700; }
+    .stat-cell .v { font-size: 20px; font-weight: 900; color: #fff; line-height: 1.2; }
+    .stat-cell.xp .v { color: var(--cyan-2); }
+    .stat-cell.lvl .v { color: var(--lav); }
+    .stat-cell.lives .v { color: var(--red); }
+    .pulse { animation: pulse .45s ease; }
+    @keyframes pulse { 50% { transform: scale(1.22); } }
+
+    /* Карта уровней (степпер) */
+    .map-card {
+      padding: 16px; border-radius: var(--radius-md);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border: 1px solid var(--line); box-shadow: var(--shadow-lg);
+    }
+    .map-head {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 12px;
+    }
+    .map-head h3 { margin: 0; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+    .map-head span { font-size: 12px; color: var(--muted); font-weight: 700; }
+    .map-list { position: relative; display: flex; flex-direction: column; gap: 4px; }
+    .map-list::before {
+      content: ''; position: absolute; left: 17px; top: 20px; bottom: 20px; width: 2px;
+      background: linear-gradient(180deg, rgba(34,211,238,.5), rgba(139,92,246,.5), transparent);
+      opacity: .5;
+    }
+    .map-item {
+      position: relative; display: flex; align-items: center; gap: 12px;
+      padding: 8px 10px; border-radius: 12px; cursor: pointer;
+      border: 1px solid transparent; transition: all .18s;
+      background: transparent; color: var(--ink-soft); text-align: left;
+      font-family: inherit; font-size: 13.5px; font-weight: 600;
+    }
+    .map-item:hover { background: rgba(255,255,255,.05); border-color: var(--line); }
+    .map-item .bullet {
+      width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 12px; font-weight: 900;
+      background: rgba(255,255,255,.06); border: 1px solid var(--line); color: var(--muted);
+      position: relative; z-index: 1; transition: all .18s;
+    }
+    .map-item.current .bullet { background: var(--grad-main); color: #06122e; border-color: transparent; box-shadow: var(--glow-cyan); }
+    .map-item.done .bullet { background: rgba(52,211,153,.18); color: var(--green); border-color: rgba(52,211,153,.5); }
+    .map-item.current { background: rgba(34,211,238,.08); border-color: rgba(34,211,238,.25); color: #fff; }
+    .map-item .lbl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .map-item .st { font-size: 11px; color: var(--muted); font-weight: 700; }
+
+    .progress-mini { margin-top: 12px; }
+    .progress-mini .bar {
+      height: 8px; background: rgba(255,255,255,.06); border-radius: 20px; overflow: hidden;
+      border: 1px solid var(--line);
+    }
+    .progress-mini .fill {
+      height: 100%; width: 0%; border-radius: 20px;
+      background: linear-gradient(90deg, var(--cyan), var(--indigo), var(--pink));
+      transition: width .4s ease;
+      box-shadow: 0 0 14px rgba(99,102,241,.5);
+    }
+
+    /* ===== Правая колонка ===== */
+    .workspace { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+
+    .hero {
+      position: relative; overflow: hidden;
+      padding: 36px 32px; border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(99,102,241,.35), rgba(34,211,238,.15) 55%, rgba(244,114,182,.2));
+      border: 1px solid var(--line); box-shadow: var(--shadow-lg);
+    }
+    .hero::before, .hero::after {
+      content: ''; position: absolute; border-radius: 50%; pointer-events: none; filter: blur(60px);
+    }
+    .hero::before { width: 320px; height: 320px; top: -120px; right: -80px; background: rgba(34,211,238,.35); }
+    .hero::after { width: 260px; height: 260px; bottom: -140px; left: -40px; background: rgba(244,114,182,.3); }
+    .hero .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 11px; letter-spacing: .24em; text-transform: uppercase; font-weight: 800;
+      color: var(--cyan-2); padding: 6px 14px; border-radius: 999px;
+      background: rgba(34,211,238,.1); border: 1px solid rgba(34,211,238,.35);
+    }
+    .hero h1 {
+      margin: 14px 0 8px; font-size: clamp(28px, 4.4vw, 42px); line-height: 1.06;
+      font-weight: 900; letter-spacing: -.02em;
+      background: var(--grad-text);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .hero p { margin: 0; max-width: 640px; color: var(--ink-soft); font-size: 15.5px; }
+
+    /* Панель «миссия + схема» */
+    .mission {
+      display: grid; grid-template-columns: 1.1fr .9fr; gap: 22px; align-items: center;
+      padding: 24px; border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02));
+      border: 1px solid var(--line); box-shadow: var(--shadow-lg);
+    }
+    .mission .tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 800;
+      color: var(--cyan-2); padding: 6px 12px; border-radius: 999px;
+      background: rgba(34,211,238,.08); border: 1px solid rgba(34,211,238,.28);
+      margin-bottom: 10px;
+    }
+    .mission h2 { margin: 0 0 10px; font-size: 22px; color: #fff; }
+    .diagram {
+      background: radial-gradient(circle at 50% 30%, rgba(34,211,238,.10), rgba(7,11,31,.5));
+      border: 1px solid var(--line); border-radius: var(--radius-md); padding: 12px;
+    }
+    .diagram svg { width: 100%; height: auto; display: block; }
+
+    /* Рабочая карточка шага */
+    .work-card {
+      padding: 26px; border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02));
+      border: 1px solid var(--line); box-shadow: var(--shadow-lg);
+      position: relative; overflow: hidden;
+    }
+    .work-card::before {
+      content: ''; position: absolute; inset: 0 0 auto 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(34,211,238,.6), rgba(139,92,246,.6), transparent);
+    }
+    .work-head {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 16px;
+    }
+    .step-badge {
+      width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center;
+      background: var(--grad-main); color: #fff; font-weight: 900; font-size: 18px;
+      box-shadow: var(--glow-indigo); flex-shrink: 0;
+    }
+    .work-head h2 { margin: 0; font-size: 22px; color: #fff; letter-spacing: -.01em; }
+
+    .step { display: none; }
+    .step.active { display: block; animation: appear .35s cubic-bezier(.4,0,.2,1); }
+    @keyframes appear { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    .formula {
+      background: rgba(34,211,238,.05); border: 1px solid rgba(34,211,238,.18);
+      border-left: 3px solid var(--cyan); border-radius: var(--radius-sm);
+      padding: 16px; margin: 16px 0; overflow-x: auto; font-size: 18px; color: var(--ink);
+    }
+    .explain {
+      background: rgba(251,191,36,.07); border: 1px solid rgba(251,191,36,.25);
+      border-radius: var(--radius-sm); padding: 13px 16px; margin-top: 14px; color: #fde68a;
+    }
+    .explain::before { content: '💡 '; }
+
+    /* Навигация под шагом */
+    .nav-row {
+      display: flex; justify-content: space-between; gap: 12px; align-items: center;
+      margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); flex-wrap: wrap;
+    }
+    button {
+      border: 0; border-radius: var(--radius-sm); padding: 12px 20px; font-size: 14.5px;
+      font-weight: 700; cursor: pointer; transition: transform .15s, box-shadow .2s, background .2s;
+      font-family: inherit;
+    }
+    button:active:not(:disabled) { transform: scale(.97); }
+    button:disabled { opacity: .35; cursor: not-allowed; }
+    .primary { color: #06122e; background: linear-gradient(135deg, var(--cyan-2), var(--indigo)); box-shadow: var(--glow-cyan); }
+    .primary:hover:not(:disabled) { box-shadow: 0 0 0 1px rgba(34,211,238,.4), 0 14px 30px rgba(34,211,238,.3); transform: translateY(-1px); }
+    .secondary { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--line); }
+    .secondary:hover:not(:disabled) { background: rgba(255,255,255,.08); color: #fff; }
+
+    /* Мини-игры */
+    .game {
+      padding: 22px; margin: 20px 0; border-radius: var(--radius-md);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border: 1px solid var(--line);
+    }
+    .game-title { font-weight: 800; color: var(--cyan-2); margin-bottom: 8px; font-size: 16px; }
+    .game-sub { color: var(--muted); font-size: 13.5px; margin-bottom: 16px; }
+    .drop-slots {
+      display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+      padding: 16px; border: 1.5px dashed rgba(34,211,238,.35); border-radius: var(--radius-md);
+      background: rgba(34,211,238,.04); min-height: 68px; font-size: 20px;
+    }
+    .drop-slots .slot {
+      min-width: 56px; height: 46px; border-radius: 10px;
+      border: 1.5px solid rgba(139,92,246,.35); background: rgba(139,92,246,.08);
+      display: grid; place-items: center; color: var(--muted); font-weight: 800;
+      transition: all .2s; padding: 0 10px;
+    }
+    .drop-slots .slot.filled {
+      border-color: var(--cyan); background: rgba(34,211,238,.14); color: #fff;
+      box-shadow: 0 0 14px rgba(34,211,238,.35);
+    }
+    .drop-slots .slot.over { border-color: var(--pink); background: rgba(244,114,182,.18); }
+    .drop-slots .eq { color: var(--ink); font-weight: 800; padding: 0 4px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .chip {
+      padding: 9px 16px; border-radius: 10px; cursor: grab;
+      background: rgba(139,92,246,.14); border: 1px solid rgba(139,92,246,.4);
+      color: var(--lav); font-weight: 800; font-size: 15px; user-select: none;
+      transition: transform .15s, box-shadow .2s, background .2s;
+    }
+    .chip:hover { transform: translateY(-2px); background: rgba(139,92,246,.22); box-shadow: var(--glow-indigo); }
+    .chip.dragging { opacity: .5; }
+    .chip.used { opacity: .3; pointer-events: none; }
+    .game-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .game-msg { margin-top: 14px; font-weight: 800; }
+    .game-msg.ok { color: var(--green); }
+    .game-msg.err { color: var(--red); }
+    .fraction {
+      display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle;
+      line-height: 1.1; margin: 0 2px;
+    }
+    .fraction .num { border-bottom: 2px solid var(--ink-soft); padding: 0 8px 3px; }
+    .fraction .den { padding: 3px 8px 0; }
+
+    /* Финал и арена */
+    .final-card {
+      padding: 24px; border-radius: var(--radius-lg);
+      background: linear-gradient(160deg, rgba(52,211,153,.08), rgba(255,255,255,.02));
+      border: 1px solid rgba(52,211,153,.3); box-shadow: var(--shadow-lg);
+    }
+    .final-card h2 { color: var(--green); margin-top: 0; }
+    .final-formula {
+      background: rgba(52,211,153,.06); border-radius: var(--radius-sm);
+      padding: 14px; margin: 12px 0; overflow-x: auto; border: 1px dashed rgba(52,211,153,.4);
+    }
+    .small-note { font-size: 13px; color: var(--muted); }
+    .confetti-banner { text-align: center; font-size: 40px; letter-spacing: 8px; animation: bounce 1s infinite alternate; }
+    @keyframes bounce { to { transform: translateY(-6px); } }
+
+    .quiz {
+      padding: 26px; border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02));
+      border: 1px solid var(--line); box-shadow: var(--shadow-lg);
+    }
+    .quiz h2 { margin-top: 0; }
+    .boss {
+      display: flex; align-items: center; gap: 16px;
+      background: linear-gradient(135deg, rgba(251,113,133,.12), rgba(244,114,182,.06));
+      border: 1px solid rgba(251,113,133,.3); border-radius: var(--radius-md);
+      padding: 16px; margin: 16px 0;
+    }
+    .boss-avatar { font-size: 48px; line-height: 1; animation: dragonFloat 2.4s ease-in-out infinite; filter: drop-shadow(0 0 14px rgba(251,113,133,.5)); }
+    @keyframes dragonFloat { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-9px) rotate(4deg); } }
+    .boss-info { flex: 1; }
+    .boss-name { font-weight: 800; color: #fecdd3; margin-bottom: 6px; font-size: 14px; }
+    .hp-bar { height: 16px; background: rgba(251,113,133,.14); border-radius: 10px; overflow: hidden; border: 1px solid rgba(251,113,133,.28); }
+    .hp-fill { height: 100%; width: 100%; border-radius: 10px; background: linear-gradient(90deg, #fb7185, #f472b6); transition: width .5s ease; box-shadow: 0 0 12px rgba(251,113,133,.6); }
+    .boss.hit { animation: shake .4s; }
+    @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+    .boss.defeated { opacity: .55; filter: grayscale(.5); }
+    .boss.defeated .boss-avatar { animation: none; }
+
+    .quiz-question { font-weight: 800; margin: 18px 0 8px; color: #fff; }
+    .option {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+      margin: 8px 0; cursor: pointer; transition: all .15s; background: rgba(255,255,255,.02);
+    }
+    .option:hover { border-color: rgba(139,92,246,.5); background: rgba(139,92,246,.08); }
+    .option.correct { border-color: var(--green); background: rgba(52,211,153,.1); box-shadow: 0 0 0 1px rgba(52,211,153,.3); }
+    .option.wrong { border-color: var(--red); background: rgba(251,113,133,.1); }
+    .option input { accent-color: var(--cyan); width: 18px; height: 18px; }
+    .feedback { margin-top: 16px; font-weight: 800; font-size: 16px; }
+    .feedback.bad { color: var(--amber); }
+    .feedback.good { color: var(--green); }
+
+    .xp-float {
+      position: fixed; pointer-events: none; z-index: 999;
+      font-weight: 900; font-size: 22px; color: var(--cyan-2);
+      text-shadow: 0 0 14px rgba(34,211,238,.9), 0 2px 8px rgba(3,8,30,.7);
+      animation: floatUp 1s ease-out forwards;
+    }
+    @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-60px) scale(1.4); } }
+
+    footer { text-align: center; padding: 26px; color: var(--muted); font-size: 13px; }
+
+    /* ===== Адаптив ===== */
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; }
+      .sidebar { position: static; }
+      .map-list { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+      .map-list::before { display: none; }
+      .map-item { flex: 1 1 45%; }
+    }
+    @media (max-width: 700px) {
+      .mission { grid-template-columns: 1fr; }
+      .hero { padding: 26px 20px; }
+      .work-card, .mission, .quiz, .final-card, .game { padding: 20px; }
+      .nav-row button { flex: 1; }
+      .stats-card { grid-template-columns: 1fr 1fr 1fr; }
+    }
+
+    /* ===== Добавки: «живой» слой ===== */
+    #fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+    #confetti { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 50; pointer-events: none; }
+    .hero h1 .cursor { display:inline-block; width:.07em; height:.9em; margin-left:.08em; background:var(--cyan-2); vertical-align:-.08em; animation: blink 1s steps(2) infinite; -webkit-text-fill-color: initial; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .hero { animation: floatIn .8s ease both; }
+    @keyframes floatIn { from { opacity:0; transform: translateY(14px);} to { opacity:1; transform:none; } }
+    .lab { padding: 26px; border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); backdrop-filter: blur(8px); }
+    .lab h2 { margin: 8px 0 4px; font-size: 24px; }
+    .lab .lead { margin: 0 0 16px; color: var(--ink-soft); font-size: 14.5px; }
+    .lab canvas { width: 100%; height: auto; display: block; border-radius: var(--radius-md); background: rgba(5,9,28,.6); border: 1px solid var(--line); }
+    .lab-ctl { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; margin-top: 14px; }
+    .lab-ctl label { font-weight: 800; color: var(--cyan-2); letter-spacing: .04em; }
+    .lab-ctl input[type=range] { flex: 1 1 180px; accent-color: #22d3ee; }
+    .lab-ctl button { font-family: inherit; font-weight: 800; font-size: 14px; color: var(--ink); padding: 10px 16px; border-radius: 12px; cursor: pointer; background: rgba(255,255,255,.06); border: 1px solid var(--line); transition: .18s; }
+    .lab-ctl button:hover { background: rgba(34,211,238,.14); border-color: rgba(34,211,238,.45); transform: translateY(-1px); }
+    .lab-ctl button.hot { background: var(--grad-main); color: #06122e; border: 0; box-shadow: var(--glow-cyan); }
+    .lab-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+    .lab-info div { padding: 10px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+    .lab-info b { display: block; font-size: 18px; color: #fff; }
+    .work-card, .quiz, .mission { transition: transform .25s, box-shadow .25s; }
+    .work-card:hover, .mission:hover { transform: translateY(-2px); }
+    @media (prefers-reduced-motion: reduce) { .hero, .hero h1 .cursor { animation: none; } }
+  </style>
+</head>
+<body>
+
+  <div class="shell">
+
+    <!-- ===== Левая колонка: бренд, статистика, карта уровней ===== -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">⚛</div>
+        <div>
+          <div class="brand-title">Квантовый квест</div>
+          <div class="brand-sub">Потенциальная яма</div>
+        </div>
+      </div>
+
+      <div class="stats-card">
+        <div class="stat-cell lvl">
+          <div class="k">Уровень</div>
+          <div class="v" id="lvlVal">1</div>
+        </div>
+        <div class="stat-cell xp">
+          <div class="k">XP</div>
+          <div class="v" id="xpVal">0</div>
+        </div>
+        <div class="stat-cell lives">
+          <div class="k">Жизни</div>
+          <div class="v" id="livesVal">3</div>
+        </div>
+      </div>
+
+      <div class="map-card">
+        <div class="map-head">
+          <h3>Карта уровней</h3>
+          <span id="percentLabel">14%</span>
+        </div>
+        <div class="map-list" id="stepDots" aria-label="Переход к уровням"></div>
+        <div class="progress-mini">
+          <div class="bar"><div class="fill" id="progressFill"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:8px;">
+            <span class="small-note" id="stepLabel">Уровень 1 из 7</span>
+            <span class="small-note">прогресс</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== Правая колонка: рабочая область ===== -->
+    <div class="workspace">
+
+      <section class="hero">
+        <span class="eyebrow">Интерактивный квантовый квест</span>
+        <h1>Потенциальная яма</h1>
+        <p>Пройди 7 уровней, собери уравнение Шрёдингера и формулу энергии, победи дракона и стань покорителем ямы.</p>
+      </section>
+
+      <section class="mission">
+        <div>
+          <span class="tag">📜 Брифинг миссии</span>
+          <h2>Условие задачи</h2>
+          <p>Частица массой \(m\) находится в бесконечно глубокой прямоугольной потенциальной яме шириной \(a\). Найти энергии стационарных состояний частицы и соответствующие им волновые функции.</p>
+          <p class="small-note"><b>Дано:</b> масса частицы \(m\), ширина ямы \(a\).<br><b>Найти:</b> \(E_n\) и \(\Psi_n(x)\).</p>
+        </div>
+        <div class="diagram">
+          <svg id="pitSvg" viewBox="0 0 420 235" role="img" aria-label="Схема бесконечной потенциальной ямы с частицей">
+            <defs>
+              <linearGradient id="wallGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#22d3ee"/>
+              </linearGradient>
+              <radialGradient id="particleGrad">
+                <stop offset="0%" stop-color="#fff"/><stop offset="45%" stop-color="#22d3ee"/>
+                <stop offset="100%" stop-color="#8b5cf6"/>
+              </radialGradient>
+            </defs>
+            <line x1="35" y1="185" x2="390" y2="185" stroke="#33415c" stroke-width="2"/>
+            <line x1="65" y1="185" x2="65" y2="25" stroke="url(#wallGrad)" stroke-width="7" stroke-linecap="round"/>
+            <line x1="315" y1="185" x2="315" y2="25" stroke="url(#wallGrad)" stroke-width="7" stroke-linecap="round"/>
+            <line x1="65" y1="185" x2="315" y2="185" stroke="#22d3ee" stroke-width="2" opacity=".5"/>
+            <path d="M65 185 L65 42 L315 42 L315 185" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="5 5" opacity=".5"/>
+            <path id="wavePath" class="wave-path" d="" fill="none" stroke="#22d3ee" stroke-width="2.5" opacity=".9"/>
+            <circle id="particleAura" class="particle-aura" cx="190" cy="150" r="18"/>
+            <circle id="particle" class="particle-core" cx="190" cy="150" r="10" fill="url(#particleGrad)"/>
+            <text x="190" y="165" text-anchor="middle" font-size="15" fill="#67e8f9" font-weight="bold" dy="14">V(x) = 0</text>
+            <text x="65" y="207" text-anchor="middle" font-size="14" fill="#7f8fb8">0</text>
+            <text x="315" y="207" text-anchor="middle" font-size="14" fill="#7f8fb8">a</text>
+            <text x="190" y="228" text-anchor="middle" font-size="13" fill="#5f6d93">координата x</text>
+            <text x="48" y="22" text-anchor="middle" font-size="13" fill="#c4b5fd">∞</text>
+            <text x="332" y="22" text-anchor="middle" font-size="13" fill="#c4b5fd">∞</text>
+          </svg>
+        </div>
+      </section>
+
+
+
+      <!-- Рабочая карточка -->
+      <section class="work-card">
+        <div class="work-head">
+          <div class="step-badge" id="stepBadge">1</div>
+          <h2 id="stepTitle">Анализируем условие</h2>
+        </div>
+
+        <div id="steps">
+          <article class="step active">
+            <p>Сначала выписываем известные величины и определяем, что требуется найти.</p>
+            <div class="formula">\[\text{Дано: }m,\ a\qquad \text{Найти: }E_n,\ \Psi_n(x)\]</div>
+            <p>Так как яма бесконечно глубокая, частица находится только внутри промежутка от \(0\) до \(a\). За пределами ямы волновая функция равна нулю.</p>
+            <div class="explain"><b>Важно:</b> в этой задаче рассматривается одномерное движение частицы.</div>
+          </article>
+
+          <article class="step">
+            <p>Принимаем дно ямы за нулевой уровень энергии. Внутри ямы потенциальная энергия равна нулю, а за её пределами бесконечна.</p>
+            <div class="formula">\[
+              V(x)=\begin{cases}0, & 0&lt;x&lt;a,\\ +\infty, & x\leq 0,\ x\geq a.\end{cases}\]
+            </div>
+            <div class="explain">Поэтому решать уравнение будем только внутри ямы, где \(0&lt;x&lt;a\).</div>
+          </article>
+
+          <article class="step">
+            <p>Внутри ямы \(V(x)=0\), поэтому стационарное уравнение Шрёдингера принимает вид:</p>
+            <div class="formula">\[-\frac{\hbar^2}{2m}\frac{d^2\Psi(x)}{dx^2}=E\Psi(x).\]</div>
+            <p>Введём обозначение:</p>
+            <div class="formula">\[k^2=\frac{2mE}{\hbar^2}.\qquad \Psi''(x)+k^2\Psi(x)=0.\]</div>
+            <div class="explain">Это дифференциальное уравнение, общее решение которого содержит синус и косинус.</div>
+
+            <div class="game" id="eqGame">
+              <div class="game-title">🧩 Мини-игра 1 · Собери уравнение Шрёдингера</div>
+              <div class="game-sub">Перетащи символы в пустые слоты. Можно и кликом: выбери символ, затем слот.</div>
+              <div class="drop-slots" id="slots">
+                <span class="eq">−</span>
+                <span class="slot" data-answer="hbar2" data-placeholder="?">?</span>
+                <span class="eq">/</span>
+                <span class="slot" data-answer="2m" data-placeholder="?">?</span>
+                <span class="eq">·</span>
+                <span class="slot" data-answer="d2" data-placeholder="?">?</span>
+                <span class="eq">Ψ(x) = EΨ(x)</span>
+              </div>
+              <div class="chips" id="chips">
+                <span class="chip" draggable="true" data-val="hbar2">ℏ²</span>
+                <span class="chip" draggable="true" data-val="2m">2m</span>
+                <span class="chip" draggable="true" data-val="d2">d²/dx²</span>
+                <span class="chip" draggable="true" data-val="k2">k²</span>
+                <span class="chip" draggable="true" data-val="E">E</span>
+              </div>
+              <div class="game-actions">
+                <button class="primary" id="checkEq">Проверить</button>
+                <button class="secondary" id="resetEq">Сбросить</button>
+              </div>
+              <div class="game-msg" id="eqMsg"></div>
+            </div>
+          </article>
+
+          <article class="step">
+            <p>На бесконечно высоких стенках частица находиться не может. Поэтому волновая функция на границах ямы равна нулю:</p>
+            <div class="formula">\[\Psi(0)=0,\qquad \Psi(a)=0.\]</div>
+            <p>Общее решение уравнения:</p>
+            <div class="formula">\[\Psi(x)=A\sin(kx)+B\cos(kx).\]</div>
+            <p>Из условия \(\Psi(0)=0\) получаем \(B=0\). Значит:</p>
+            <div class="formula">\[\Psi(x)=A\sin(kx).\]</div>
+            <div class="explain">Второе граничное условие понадобится, чтобы определить допустимые значения \(k\).</div>
+          </article>
+
+          <article class="step">
+            <p>Подставляем \(x=a\) во второе граничное условие:</p>
+            <div class="formula">\[A\sin(ka)=0.\]</div>
+            <p>Ненулевое решение возможно, если:</p>
+            <div class="formula">\[\sin(ka)=0\ \Rightarrow\ ka=\pi n.\qquad k_n=\frac{\pi n}{a},\ n=1,2,3,\ldots\]</div>
+            <div class="explain">Число \(n\) — квантовое число. Оно принимает только положительные целые значения.</div>
+          </article>
+
+          <article class="step">
+            <p>Используем связь волнового числа с энергией:</p>
+            <div class="formula">\[k^2=\frac{2mE}{\hbar^2}\ \Rightarrow\ E=\frac{\hbar^2k^2}{2m}.\]</div>
+            <p>Подставляем найденное значение \(k_n=\frac{\pi n}{a}\):</p>
+            <div class="formula">\[\boxed{E_n=\frac{\pi^2\hbar^2n^2}{2ma^2}}\]</div>
+            <div class="explain">Энергия принимает не любые значения, а только отдельные разрешённые. Это квантование энергии.</div>
+
+            <div class="game" id="energyGame">
+              <div class="game-title">🧩 Мини-игра 2 · Собери формулу энергии</div>
+              <div class="game-sub">Собери выражение для \(E_n\). Перетащи символы в слоты числителя и знаменателя.</div>
+              <div class="drop-slots" id="energySlots" style="align-items:center;">
+                <span class="eq">E<sub>n</sub> =</span>
+                <span class="fraction">
+                  <span class="slot num-slot" data-answer="pi2" data-placeholder="?">?</span>
+                  <span class="slot den-slot" data-answer="den" data-placeholder="?">?</span>
+                </span>
+              </div>
+              <div class="game-sub" style="margin-top:12px;">Слоты: числитель — один символ, знаменатель — один символ.</div>
+              <div class="chips" id="energyChips">
+                <span class="chip" draggable="true" data-val="pi2">π²ℏ²n²</span>
+                <span class="chip" draggable="true" data-val="den">2ma²</span>
+                <span class="chip" draggable="true" data-val="hbar2">ℏ²</span>
+                <span class="chip" draggable="true" data-val="ma">ma</span>
+                <span class="chip" draggable="true" data-val="n2">n²</span>
+              </div>
+              <div class="game-actions">
+                <button class="primary" id="checkEnergy">Проверить</button>
+                <button class="secondary" id="resetEnergy">Сбросить</button>
+              </div>
+              <div class="game-msg" id="energyMsg"></div>
+            </div>
+          </article>
+
+          <article class="step">
+            <p>Подставляем \(k_n\) в найденное ранее выражение:</p>
+            <div class="formula">\[\Psi_n(x)=A\sin\left(\frac{\pi nx}{a}\right).\]</div>
+            <p>Используем условие нормировки, чтобы определить постоянную \(A\):</p>
+            <div class="formula">\[\int_0^a|\Psi_n(x)|^2dx=1\ \Rightarrow\ A=\sqrt{\frac{2}{a}}.\]</div>
+            <div class="formula">\[\boxed{\Psi_n(x)=\sqrt{\frac{2}{a}}\sin\left(\frac{\pi nx}{a}\right)}\]</div>
+            <div class="explain">Получили нормированные волновые функции стационарных состояний частицы.</div>
+          </article>
+        </div>
+
+        <div class="nav-row">
+          <button class="secondary" id="prevBtn" disabled>← Назад</button>
+          <button class="primary" id="nextBtn">Следующий уровень →</button>
+        </div>
+      </section>
+
+      <section class="final-card" id="finalCard" hidden>
+        <div class="confetti-banner">🎉🏆🎉</div>
+        <h2>Итоговое решение</h2>
+        <p>Для бесконечно глубокой прямоугольной потенциальной ямы шириной \(a\) получаем:</p>
+        <div class="final-formula">
+          <b>Энергии:</b>
+          \[E_n=\frac{\pi^2\hbar^2n^2}{2ma^2},\quad n=1,2,3,\ldots\]
+        </div>
+        <div class="final-formula">
+          <b>Волновые функции:</b>
+          \[\Psi_n(x)=\sqrt{\frac{2}{a}}\sin\left(\frac{\pi nx}{a}\right),\quad 0&lt;x&lt;a.\]
+        </div>
+        <p class="small-note">За пределами ямы \(\Psi_n(x)=0\).</p>
+        <button class="primary" onclick="restart()">🔁 Пройти квест ещё раз</button>
+      </section>
+
+      <section class="lab" id="lab">
+        <span class="tag">🔬 Лаборатория</span>
+        <h2>Поймай частицу в яме</h2>
+        <p class="lead">Выбери уровень энергии и «измеряй» положение частицы. Точки падают туда, где велика вероятность — и со временем рисуют \(|\Psi_n|^2\).</p>
+        <canvas id="labCv" width="760" height="320" aria-label="Волновая функция и измерения частицы в яме"></canvas>
+        <div class="lab-ctl">
+          <label for="nRange">n = <span id="nVal">1</span></label>
+          <input type="range" id="nRange" min="1" max="6" value="1">
+          <button class="hot" id="measure1">🎯 Измерить</button>
+          <button id="measure100">×100</button>
+          <button id="measureReset">Сбросить</button>
+        </div>
+        <div class="lab-info">
+          <div>Энергия<b id="iE">E = 1·E₁</b></div>
+          <div>Узлов (нулей ψ)<b id="iNodes">0</b></div>
+          <div>Измерений<b id="iCount">0</b></div>
+          <div>Последнее x/a<b id="iLast">—</b></div>
+        </div>
+      </section>
+
+      <section class="quiz">
+        <h2>⚔️ Финальная битва: дракон</h2>
+        <p class="muted">У дракона 3 HP. Каждый правильный ответ — удар (−1 HP). Каждый неверный — дракон бьёт тебя (теряешь жизнь). Победи дракона!</p>
+
+        <div class="boss" id="boss">
+          <div class="boss-avatar" id="bossAvatar">🐉</div>
+          <div class="boss-info">
+            <div class="boss-name" id="bossName">Дракон · HP <span id="bossHp">3</span>/3</div>
+            <div class="hp-bar"><div class="hp-fill" id="hpFill"></div></div>
+          </div>
+        </div>
+
+        <div class="quiz-question">1. Чему равна потенциальная энергия внутри ямы?</div>
+        <label class="option" data-q="q1"><input type="radio" name="q1" value="a"> Бесконечности</label>
+        <label class="option" data-q="q1"><input type="radio" name="q1" value="b"> Нулю</label>
+        <label class="option" data-q="q1"><input type="radio" name="q1" value="c"> Всегда равна энергии частицы</label>
+        <div class="quiz-question">2. Чему равна волновая функция на стенках ямы?</div>
+        <label class="option" data-q="q2"><input type="radio" name="q2" value="a"> Единице</label>
+        <label class="option" data-q="q2"><input type="radio" name="q2" value="b"> Бесконечности</label>
+        <label class="option" data-q="q2"><input type="radio" name="q2" value="c"> Нулю</label>
+        <div class="quiz-question">3. Какие значения может принимать квантовое число \(n\)?</div>
+        <label class="option" data-q="q3"><input type="radio" name="q3" value="a"> Только положительные целые</label>
+        <label class="option" data-q="q3"><input type="radio" name="q3" value="b"> Любые действительные</label>
+        <label class="option" data-q="q3"><input type="radio" name="q3" value="c"> Только отрицательные</label>
+        <button class="primary" id="checkQuiz">Атаковать дракона ⚔️</button>
+        <div class="feedback" id="quizFeedback" aria-live="polite"></div>
+      </section>
+
+      <footer>⚛ Учебный квантовый квест · потенциальная яма</footer>
+    </div>
+  </div>
+
+  <script>
+    const steps = Array.from(document.querySelectorAll('.step'));
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const progressFill = document.getElementById('progressFill');
+    const stepLabel = document.getElementById('stepLabel');
+    const percentLabel = document.getElementById('percentLabel');
+    const dotsBox = document.getElementById('stepDots');
+    const finalCard = document.getElementById('finalCard');
+    const stepBadge = document.getElementById('stepBadge');
+    const stepTitle = document.getElementById('stepTitle');
+
+    const stepTitles = [
+      'Анализируем условие',
+      'Потенциальная энергия',
+      'Уравнение Шрёдингера',
+      'Граничные условия',
+      'Волновое число',
+      'Энергии состояний',
+      'Волновая функция'
+    ];
+    const stepShort = [
+      'Условие', 'V(x)', 'Ур. Шрёдингера',
+      'Границы', 'kₙ', 'Eₙ', 'Ψₙ(x)'
+    ];
+
+    const particle = document.getElementById('particle');
+    const particleAura = document.getElementById('particleAura');
+    const wavePath = document.getElementById('wavePath');
+
+    const PIT_LEFT = 75;
+    const PIT_RIGHT = 305;
+    const PIT_TOP = 55;
+    const PIT_BOTTOM = 175;
+
+    const particlePositions = [
+      { cx: 190, cy: 150 },
+      { cx: 110, cy: 150 },
+      { cx: 190, cy: 150 },
+      { cx: 270, cy: 150 },
+      { cx: 150, cy: 100 },
+      { cx: 230, cy: 100 },
+      { cx: 190, cy: 70 }
+    ];
+
+    function drawWave(n) {
+      const pts = [];
+      const N = 80;
+      for (let i = 0; i <= N; i++) {
+        const x = PIT_LEFT + (PIT_RIGHT - PIT_LEFT) * (i / N);
+        const t = i / N;
+        const y = PIT_BOTTOM - 20 - (PIT_BOTTOM - PIT_TOP - 40) * 0.5 *
+                  (Math.sin(Math.PI * n * t) * 0.5 + 0.5);
+        pts.push(`${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`);
+      }
+      wavePath.setAttribute('d', pts.join(' '));
+      wavePath.classList.remove('drawn');
+      void wavePath.getBoundingClientRect();
+      wavePath.classList.add('drawn');
+    }
+
+    function updateParticle(stepIndex) {
+      const pos = particlePositions[stepIndex] || particlePositions[0];
+      particle.setAttribute('cx', pos.cx);
+      particle.setAttribute('cy', pos.cy);
+      particleAura.setAttribute('cx', pos.cx);
+      particleAura.setAttribute('cy', pos.cy);
+      if (stepIndex >= 4) drawWave(Math.min(stepIndex - 2, 5));
+      else { wavePath.setAttribute('d', ''); wavePath.classList.remove('drawn'); }
+    }
+
+    const state = {
+      xp: 0, level: 1, lives: 3,
+      visited: new Set([0]), quizDone: false, eqSolved: false, energySolved: false
+    };
+
+    const xpVal = document.getElementById('xpVal');
+    const lvlVal = document.getElementById('lvlVal');
+    const livesVal = document.getElementById('livesVal');
+
+    let current = 0;
+
+    let audioCtx = null;
+    function beep(freq = 660, duration = 0.08, type = 'sine', gain = 0.05) {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = type; osc.frequency.value = freq; g.gain.value = gain;
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start();
+        g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+    function playGood() { beep(880, .1, 'triangle'); setTimeout(() => beep(1180, .12, 'triangle'), 90); }
+    function playBad() { beep(220, .18, 'sawtooth', .04); }
+    function playClick() { beep(520, .05, 'square', .03); }
+
+    function floatXp(amount, el) {
+      const rect = el.getBoundingClientRect();
+      const span = document.createElement('span');
+      span.className = 'xp-float';
+      span.textContent = '+' + amount + ' XP';
+      span.style.left = (rect.left + rect.width / 2) + 'px';
+      span.style.top = (rect.top - 10) + 'px';
+      document.body.appendChild(span);
+      setTimeout(() => span.remove(), 1000);
+    }
+
+    function updateHud() {
+      xpVal.textContent = state.xp;
+      lvlVal.textContent = state.level;
+      livesVal.textContent = state.lives;
+      [xpVal, lvlVal, livesVal].forEach(el => {
+        el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+      });
+    }
+
+    function addXp(amount, el) {
+      state.xp += amount;
+      const newLevel = Math.floor(state.xp / 50) + 1;
+      if (newLevel > state.level) { state.level = newLevel; playGood(); }
+      else playClick();
+      if (el) floatXp(amount, el);
+      updateHud();
+    }
+
+    function buildMap() {
+      dotsBox.innerHTML = '';
+      steps.forEach((_, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'map-item';
+        btn.type = 'button';
+        btn.innerHTML = `<span class="bullet">${i + 1}</span>
+                         <span class="lbl">${stepShort[i]}</span>
+                         <span class="st"></span>`;
+        btn.addEventListener('click', () => showStep(i));
+        dotsBox.appendChild(btn);
+      });
+    }
+
+    function showStep(index) {
+      const prev = current;
+      current = Math.max(0, Math.min(index, steps.length - 1));
+      if (!state.visited.has(current) && current > prev) {
+        state.visited.add(current);
+        addXp(10, nextBtn);
+      }
+      steps.forEach((step, i) => step.classList.toggle('active', i === current));
+      const percent = Math.round(((current + 1) / steps.length) * 100);
+      progressFill.style.width = percent + '%';
+      stepLabel.textContent = `Уровень ${current + 1} из ${steps.length}`;
+      percentLabel.textContent = percent + '%';
+      stepBadge.textContent = current + 1;
+      stepTitle.textContent = stepTitles[current];
+      prevBtn.disabled = current === 0;
+      nextBtn.textContent = current === steps.length - 1 ? 'Завершить ✓' : 'Следующий уровень →';
+      document.querySelectorAll('.map-item').forEach((item, i) => {
+        item.classList.toggle('current', i === current);
+        item.classList.toggle('done', i < current);
+        const st = item.querySelector('.st');
+        st.textContent = i < current ? '✓' : (i === current ? '●' : '');
+      });
+      if (current === steps.length - 1) finalCard.hidden = false;
+      updateParticle(current);
+      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+    }
+
+    prevBtn.addEventListener('click', () => showStep(current - 1));
+    nextBtn.addEventListener('click', () => {
+      if (current < steps.length - 1) showStep(current + 1);
+      else {
+        finalCard.hidden = false;
+        finalCard.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }
+    });
+
+    function restart() {
+      finalCard.hidden = true;
+      state.xp = 0; state.level = 1; state.lives = 3;
+      state.visited = new Set([0]); state.quizDone = false;
+      state.eqSolved = false; state.energySolved = false;
+      updateHud();
+      document.querySelectorAll('.option').forEach(o => o.classList.remove('correct','wrong'));
+      document.querySelectorAll('input[type=radio]').forEach(r => r.checked = false);
+      const fb = document.getElementById('quizFeedback');
+      fb.textContent = ''; fb.className = 'feedback';
+      document.getElementById('checkQuiz').disabled = false;
+      bossHp = 3; updateBoss();
+      const bossEl = document.getElementById('boss');
+      bossEl.classList.remove('defeated','hit');
+      document.getElementById('bossAvatar').textContent = '🐉';
+      resetEqGame();
+      resetEnergyGame();
+      showStep(0);
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function makeDragGame({ slotsSelector, chipsSelector, msgEl, checkBtn, resetBtn, solvedFlag, onSolved }) {
+      const slots = Array.from(document.querySelectorAll(slotsSelector + ' .slot'));
+      const chips = Array.from(document.querySelectorAll(chipsSelector + ' .chip'));
+      let selectedChip = null;
+
+      function clearSlot(slot) {
+        if (slot.dataset.filled) {
+          const val = slot.dataset.filled;
+          slot.textContent = slot.dataset.placeholder || '?';
+          slot.classList.remove('filled');
+          delete slot.dataset.filled;
+          chips.forEach(c => { if (c.dataset.val === val) c.classList.remove('used'); });
+        }
+      }
+      function placeChip(slot, chip) {
+        if (slot.dataset.filled) clearSlot(slot);
+        slot.dataset.filled = chip.dataset.val;
+        slot.textContent = chip.textContent;
+        slot.classList.add('filled');
+        chip.classList.add('used');
+        playClick();
+      }
+      slots.forEach(slot => {
+        slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('over'); });
+        slot.addEventListener('dragleave', () => slot.classList.remove('over'));
+        slot.addEventListener('drop', e => {
+          e.preventDefault();
+          slot.classList.remove('over');
+          const val = e.dataTransfer.getData('text/plain');
+          const chip = chips.find(c => c.dataset.val === val && !c.classList.contains('used'));
+          if (chip) placeChip(slot, chip);
+        });
+        slot.addEventListener('click', () => {
+          if (selectedChip) { placeChip(slot, selectedChip); selectedChip = null; }
+          else clearSlot(slot);
+        });
+      });
+      chips.forEach(chip => {
+        chip.addEventListener('dragstart', e => {
+          e.dataTransfer.setData('text/plain', chip.dataset.val);
+          chip.classList.add('dragging');
+        });
+        chip.addEventListener('dragend', () => chip.classList.remove('dragging'));
+        chip.addEventListener('click', () => {
+          chips.forEach(c => c.style.outline = '');
+          if (chip.classList.contains('used')) return;
+          if (selectedChip === chip) { selectedChip = null; chip.style.outline = ''; }
+          else { selectedChip = chip; chip.style.outline = '2px solid #22d3ee'; }
+        });
+      });
+
+      checkBtn.addEventListener('click', () => {
+        if (solvedFlag()) return;
+        let ok = true;
+        slots.forEach(slot => {
+          if (slot.dataset.filled !== slot.dataset.answer) ok = false;
+        });
+        if (ok) {
+          msgEl.textContent = '✅ Верно! +20 XP';
+          msgEl.className = 'game-msg ok';
+          onSolved();
+          playGood();
+        } else {
+          msgEl.textContent = '❌ Пока неверно. Проверь порядок символов.';
+          msgEl.className = 'game-msg err';
+          playBad();
+        }
+      });
+
+      function reset() {
+        slots.forEach(slot => {
+          slot.textContent = slot.dataset.placeholder || '?';
+          slot.classList.remove('filled');
+          delete slot.dataset.filled;
+        });
+        chips.forEach(c => c.classList.remove('used'));
+        selectedChip = null;
+        msgEl.textContent = '';
+        msgEl.className = 'game-msg';
+      }
+      resetBtn.addEventListener('click', reset);
+      return { reset };
+    }
+
+    const eqGameApi = makeDragGame({
+      slotsSelector: '#slots', chipsSelector: '#chips',
+      msgEl: document.getElementById('eqMsg'),
+      checkBtn: document.getElementById('checkEq'),
+      resetBtn: document.getElementById('resetEq'),
+      solvedFlag: () => state.eqSolved,
+      onSolved: () => { state.eqSolved = true; addXp(20, document.getElementById('checkEq')); }
+    });
+    function resetEqGame() { eqGameApi.reset(); state.eqSolved = false; }
+
+    const energyGameApi = makeDragGame({
+      slotsSelector: '#energySlots', chipsSelector: '#energyChips',
+      msgEl: document.getElementById('energyMsg'),
+      checkBtn: document.getElementById('checkEnergy'),
+      resetBtn: document.getElementById('resetEnergy'),
+      solvedFlag: () => state.energySolved,
+      onSolved: () => { state.energySolved = true; addXp(20, document.getElementById('checkEnergy')); }
+    });
+    function resetEnergyGame() { energyGameApi.reset(); state.energySolved = false; }
+
+    let bossHp = 3;
+    const hpFill = document.getElementById('hpFill');
+    const bossHpEl = document.getElementById('bossHp');
+    const bossNameEl = document.getElementById('bossName');
+    const bossEl = document.getElementById('boss');
+    const bossAvatar = document.getElementById('bossAvatar');
+
+    function updateBoss() {
+      bossHpEl.textContent = bossHp;
+      hpFill.style.width = (bossHp / 3 * 100) + '%';
+      if (bossHp <= 0) {
+        bossEl.classList.add('defeated');
+        bossAvatar.textContent = '💀';
+        bossNameEl.innerHTML = 'Дракон повержен! 🏆';
+      }
+    }
+
+    document.getElementById('checkQuiz').addEventListener('click', () => {
+      if (state.quizDone) return;
+      const answers = {q1: 'b', q2: 'c', q3: 'a'};
+      let score = 0;
+      let unanswered = false;
+
+      document.querySelectorAll('.option').forEach(o => o.classList.remove('correct','wrong'));
+
+      for (const [name, correct] of Object.entries(answers)) {
+        const selected = document.querySelector(`input[name="${name}"]:checked`);
+        if (!selected) { unanswered = true; continue; }
+        const label = selected.closest('.option');
+        if (selected.value === correct) { score++; label.classList.add('correct'); }
+        else { label.classList.add('wrong'); }
+      }
+
+      const feedback = document.getElementById('quizFeedback');
+
+      if (unanswered) {
+        feedback.textContent = '⚠️ Ответь, пожалуйста, на все три вопроса.';
+        feedback.className = 'feedback bad';
+        playBad();
+        return;
+      }
+
+      bossHp = Math.max(0, bossHp - score);
+      updateBoss();
+
+      const mistakes = 3 - score;
+      if (mistakes > 0) {
+        state.lives = Math.max(0, state.lives - mistakes);
+        playBad();
+        bossEl.classList.add('hit');
+        setTimeout(() => bossEl.classList.remove('hit'), 400);
+      } else {
+        playGood();
+      }
+
+      if (score > 0) addXp(score * 15, document.getElementById('checkQuiz'));
+
+      state.quizDone = true;
+      document.getElementById('checkQuiz').disabled = true;
+
+      let msg = `Правильных ответов: ${score} из 3. `;
+      if (score === 3) {
+        msg += 'Дракон повержен! Ты разобрался(ась) в алгоритме. 🏆';
+        feedback.className = 'feedback good';
+      } else if (score > 0) {
+        msg += 'Дракон ранен, но ещё жив. Повтори уровни и попробуй ещё раз.';
+        feedback.className = 'feedback bad';
+      } else {
+        msg += 'Дракон смеётся. Повтори уровни и попробуй снова.';
+        feedback.className = 'feedback bad';
+      }
+      if (state.lives === 0) {
+        msg += ' Жизни закончились — нажми «Пройти квест ещё раз».';
+      }
+      feedback.textContent = msg;
+    });
+
+    buildMap();
+    updateHud();
+    updateBoss();
+    showStep(0);
+  </script>
+
+  <canvas id="fx"></canvas><canvas id="confetti"></canvas>
+  <script>
+  (() => {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* --- Фон: дрейфующие «кванты» --- */
+    const fx = document.getElementById('fx'), fc = fx.getContext('2d');
+    let W, H, mouse = {x: -999, y: -999};
+    const P = Array.from({length: 55}, () => ({x: Math.random(), y: Math.random(), vx: (Math.random()-.5)*.0004, vy: (Math.random()-.5)*.0004, r: Math.random()*1.6+.6, c: Math.random() < .5 ? '34,211,238' : '167,139,250'}));
+    function size() { W = fx.width = innerWidth; H = fx.height = innerHeight; }
+    addEventListener('resize', size); size();
+    addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    function bg() {
+      fc.clearRect(0, 0, W, H);
+      for (const p of P) {
+        p.x = (p.x + p.vx + 1) % 1; p.y = (p.y + p.vy + 1) % 1;
+        let px = p.x*W, py = p.y*H, dx = px-mouse.x, dy = py-mouse.y, d = Math.hypot(dx, dy);
+        if (d < 120) { p.x += dx/d*.0015; p.y += dy/d*.0015; }
+        p.px = px; p.py = py;
+        fc.beginPath(); fc.arc(px, py, p.r, 0, 7); fc.fillStyle = `rgba(${p.c},.7)`; fc.shadowBlur = 10; fc.shadowColor = `rgba(${p.c},.9)`; fc.fill();
+      }
+      fc.shadowBlur = 0;
+      for (let i = 0; i < P.length; i++) for (let j = i+1; j < P.length; j++) {
+        const d = Math.hypot(P[i].px-P[j].px, P[i].py-P[j].py);
+        if (d < 110) { fc.strokeStyle = `rgba(140,170,255,${.13*(1-d/110)})`; fc.beginPath(); fc.moveTo(P[i].px, P[i].py); fc.lineTo(P[j].px, P[j].py); fc.stroke(); }
+      }
+      if (!reduce) requestAnimationFrame(bg);
+    }
+    bg();
+
+    /* --- Заголовок «печатается» --- */
+    const h1 = document.querySelector('.hero h1');
+    if (h1 && !reduce) {
+      const txt = h1.textContent; h1.textContent = '';
+      const span = document.createElement('span'), cur = document.createElement('span');
+      cur.className = 'cursor'; h1.append(span, cur);
+      let i = 0; const t = setInterval(() => { span.textContent = txt.slice(0, ++i); if (i >= txt.length) { clearInterval(t); setTimeout(() => cur.remove(), 1800); } }, 70);
+    }
+
+    /* --- Лаборатория --- */
+    const cv = document.getElementById('labCv'), g = cv.getContext('2d');
+    const $ = id => document.getElementById(id);
+    let n = 1, hits = [], stamps = [], t0 = performance.now();
+    const BINS = 40, L = {x0: 190, x1: 740, y0: 40, y1: 290};
+    function sample() { for (;;) { const x = Math.random(); if (Math.random() < Math.sin(n*Math.PI*x)**2) return x; } }
+    function measure(k) { for (let i = 0; i < k; i++) { hits.push(sample()); stamps.push(performance.now()); } $('iLast').textContent = hits[hits.length-1].toFixed(3); $('iCount').textContent = hits.length; }
+    function setN(v) { n = +v; hits = []; stamps = []; $('nVal').textContent = n; $('iE').textContent = `E = ${n*n}·E₁`; $('iNodes').textContent = n-1; $('iCount').textContent = 0; $('iLast').textContent = '—'; }
+    $('nRange').oninput = e => setN(e.target.value);
+    $('measure1').onclick = () => measure(1);
+    $('measure100').onclick = () => measure(100);
+    $('measureReset').onclick = () => setN(n);
+    const X = u => L.x0 + u*(L.x1-L.x0);
+    function draw(now) {
+      const ph = Math.cos((now-t0)/1000 * n*n * .9), mid = (L.y0+L.y1)/2 + 20, A = 80;
+      g.clearRect(0, 0, 760, 320);
+      // лестница уровней
+      for (let k = 1; k <= 6; k++) {
+        const y = L.y1 - (k*k/36)*(L.y1-L.y0-10);
+        g.strokeStyle = k === n ? '#22d3ee' : 'rgba(140,170,255,.25)'; g.lineWidth = k === n ? 3 : 1.5;
+        g.beginPath(); g.moveTo(20, y); g.lineTo(150, y); g.stroke();
+        g.fillStyle = k === n ? '#67e8f9' : '#7f8fb8'; g.font = '12px system-ui'; g.fillText('n='+k, 156-0, y+4);
+      }
+      // стенки
+      g.lineWidth = 6; g.lineCap = 'round';
+      [L.x0, L.x1].forEach(x => { const gr = g.createLinearGradient(0, L.y0, 0, L.y1); gr.addColorStop(0, '#8b5cf6'); gr.addColorStop(1, '#22d3ee'); g.strokeStyle = gr; g.beginPath(); g.moveTo(x, L.y0); g.lineTo(x, L.y1); g.stroke(); });
+      g.strokeStyle = 'rgba(34,211,238,.4)'; g.lineWidth = 2; g.beginPath(); g.moveTo(L.x0, L.y1); g.lineTo(L.x1, L.y1); g.stroke();
+      // гистограмма измерений (бины растут вместе с числом измерений)
+      if (hits.length) {
+        const N = hits.length, B = N < 30 ? 8 : N < 150 ? 16 : N < 600 ? 28 : 40, bw = (L.x1-L.x0)/B, maxH = L.y1-L.y0-10;
+        const c = new Array(B).fill(0); hits.forEach(h => c[Math.min(B-1, h*B|0)]++);
+        const alpha = Math.min(.55, .12 + N/250);
+        c.forEach((v, i) => { const h = Math.min(maxH*.95, v/N*B/2.2*maxH); g.fillStyle = `rgba(244,114,182,${alpha})`; g.fillRect(L.x0+i*bw+2, L.y1-h, bw-4, h); });
+        // падающие точки последних измерений
+        const nowT = performance.now();
+        hits.slice(-40).forEach((h, k, arr) => { const born = stamps[hits.length-arr.length+k] || 0, f = Math.min(1, (nowT-born)/450), y = L.y0 + (L.y1-L.y0)*f*f; g.beginPath(); g.arc(X(h), y, 4, 0, 7); g.fillStyle = '#fbbf24'; g.shadowBlur = 8; g.shadowColor = '#fbbf24'; g.fill(); g.shadowBlur = 0; });
+      }
+      // |ψ|² (заливка) и Re ψ (бегущая фаза)
+      g.beginPath(); g.moveTo(L.x0, L.y1);
+      for (let i = 0; i <= 200; i++) { const u = i/200; g.lineTo(X(u), L.y1 - 2*Math.sin(n*Math.PI*u)**2/2.2*(L.y1-L.y0-10)); }
+      g.lineTo(L.x1, L.y1); g.fillStyle = 'rgba(34,211,238,.14)'; g.fill();
+      g.strokeStyle = '#22d3ee'; g.lineWidth = 2; g.stroke();
+      g.beginPath();
+      for (let i = 0; i <= 200; i++) { const u = i/200, y = mid + 40 - Math.sqrt(2)*Math.sin(n*Math.PI*u)*ph*A/1.4; i ? g.lineTo(X(u), y) : g.moveTo(X(u), y); }
+      g.strokeStyle = '#c4b5fd'; g.lineWidth = 2.5; g.stroke();
+      g.fillStyle = '#c4b5fd'; g.font = '12px system-ui'; g.fillText('ψ(x)·cos(ωt)', L.x0+8, L.y0+6);
+      g.fillStyle = '#67e8f9'; g.fillText('|ψ|² — где частицу найдут чаще', L.x0+110, L.y0+6);
+      if (!reduce || true) requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+    if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([$('lab')]);
+    else addEventListener('load', () => window.MathJax && MathJax.typesetPromise && MathJax.typesetPromise([$('lab')]));
+
+    /* --- Конфетти за победу --- */
+    const cf = document.getElementById('confetti'), cc = cf.getContext('2d'); let bits = [], running = false;
+    function boom() {
+      if (reduce) return; cf.width = innerWidth; cf.height = innerHeight;
+      for (let i = 0; i < 160; i++) bits.push({x: innerWidth/2, y: innerHeight*.6, vx: (Math.random()-.5)*16, vy: -Math.random()*16-4, s: Math.random()*7+3, c: ['#22d3ee','#8b5cf6','#f472b6','#fbbf24','#34d399'][i%5], r: Math.random()*6, life: 160});
+      if (!running) { running = true; (function step() { cc.clearRect(0, 0, cf.width, cf.height); bits = bits.filter(b => b.life-- > 0); bits.forEach(b => { b.vy += .35; b.x += b.vx; b.y += b.vy; b.r += .2; cc.save(); cc.translate(b.x, b.y); cc.rotate(b.r); cc.fillStyle = b.c; cc.globalAlpha = Math.min(1, b.life/40); cc.fillRect(-b.s/2, -b.s/2, b.s, b.s*.6); cc.restore(); }); bits.length ? requestAnimationFrame(step) : (running = false, cc.clearRect(0, 0, cf.width, cf.height)); })(); }
+    }
+    const boss = document.getElementById('boss'), fin = document.getElementById('finalCard');
+    new MutationObserver(() => boss.classList.contains('defeated') && boom()).observe(boss, {attributes: true, attributeFilter: ['class']});
+    new MutationObserver(() => !fin.hidden && boom()).observe(fin, {attributes: true, attributeFilter: ['hidden']});
+  })();
+  </script>
+</body>
+</html>
